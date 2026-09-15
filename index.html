@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>出席表</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      doc,
+      setDoc,
+      deleteDoc,
+      onSnapshot,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAYo7_5r5I50HFCoXJJj0NRho-hr_HttOY",
+      authDomain: "gassyuku-manegiment-app-web.firebaseapp.com",
+      projectId: "gassyuku-manegiment-app-web",
+      storageBucket: "gassyuku-manegiment-app-web.firebasestorage.app",
+      messagingSenderId: "661528940921",
+      appId: "1:661528940921:web:38ceb7e399bc74b85a9fa8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db;
+    window.firestoreFns = {
+      collection, doc, setDoc, deleteDoc, onSnapshot, getDoc
+    };
+  </script>
+  <!-- ★ここにあった2つ目の <script src="script.js"></script> は削除済み -->
+</head>
+
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <h1>合宿運営アプリ</h1>
+      <button class="menu-button">☰</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="tabs">
+      <button class="tab-button active" data-tab="attendance-tab">①出席確認</button>
+      <button class="tab-button" data-tab="filter-tab">②フィルター管理</button>
+      <button class="tab-button" data-tab="member-list-tab">③メンバ一覧（コピー機能）</button>
+    </div>
+
+    <div id="attendance-tab" class="tab-content active">
+      <div class="page-title">
+        <div>
+          <h2>出席確認</h2>
+          <p>参加状況を確認できます</p>
+        </div>
+      </div>
+
+      <div class="file-name-area">
+        <h2 id="file-name">〇月〇日</h2>
+      </div>
+
+      <div class="control-area">
+        <label class="import-button">
+          Excelを取り込む
+          <input type="file" id="excel-file" accept=".xlsx, .xls" hidden />
+        </label>
+
+        <button id="edit-mode-button" class="edit-mode-button">🔒 編集モード</button>
+
+        <select id="attendance-filter-select" class="filter-select">
+          <option value="">フィルターなし</option>
+        </select>
+
+        <input type="text" id="search-input" class="search" placeholder="名前から検索" />
+      </div>
+
+      <div class="table-wrapper">
+        <table class="attendance-table">
+          <thead>
+            <tr>
+              <th rowspan="2" class="sticky-name">名前</th>
+              <th rowspan="2" class="sticky-lunch">弁当サイズ</th>
+              <th colspan="5" id="day1-title">1日目</th>
+              <th colspan="6" id="day2-title">2日目</th>
+              <th colspan="4" id="day3-title">3日目</th>
+              <th rowspan="2">理由</th>
+            </tr>
+            <tr>
+              <th>出欠</th><th>昼食</th><th>おやつ</th><th>夕食</th><th>宿泊</th>
+              <th>出欠</th><th>朝食</th><th>昼食</th><th>おやつ</th><th>夕食</th><th>宿泊</th>
+              <th>出欠</th><th>朝食</th><th>昼食</th><th>おやつ</th>
+            </tr>
+          </thead>
+          <tbody id="attendance-body"></tbody>
+        </table>
+      </div>
+
+      <div id="day-select-modal" class="day-select-modal">
+        <div class="day-select-box">
+          <h2>合宿日数を選択</h2>
+          <p>今回の合宿は何日間ですか？</p>
+          <div class="day-select-buttons">
+            <button data-days="1">1日間</button>
+            <button data-days="2">2日間</button>
+            <button data-days="3">3日間</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="filter-tab" class="tab-content">
+      <div class="page-title">
+        <div>
+          <h2>フィルター管理</h2>
+          <p>名簿をフィルターとして登録できます</p>
+        </div>
+      </div>
+
+      <div class="filter-create-area">
+        <h3>フィルターを作成</h3>
+        <input type="text" id="filter-name" placeholder="フィルター名（例：1班）" />
+        <textarea id="filter-members" placeholder="名簿を入力してください&#10;田中太郎&#10;佐藤花子&#10;山田一郎"></textarea>
+        <p class="filter-help">
+          ※1行につき1人の名前を入力してください。<br />
+          Excelなどからまとめてコピー＆ペーストできます。
+        </p>
+        <button id="save-filter-button">フィルターを保存</button>
+      </div>
+
+      <div class="filter-list-area">
+        <h3>作成済みフィルター</h3>
+        <div id="filter-list"></div>
+      </div>
+    </div>
+
+    <div id="member-list-tab" class="tab-content">
+      <div class="page-title">
+        <div>
+          <h2>メンバー一覧</h2>
+          <p>条件で絞り込んでメンバーを取得できます</p>
+          <p><b>※初期条件(1日目)は削除してから、新しい条件を作ってご利用ください。</b></p>
+        </div>
+      </div>
+
+      <div class="condition-area">
+        <h3>① 出欠条件で絞り込み</h3>
+        <div id="condition-list"></div>
+        <button id="add-condition-button" type="button" class="add-condition-button">＋ 条件を追加</button>
+      </div>
+
+      <div class="filter-narrow-area">
+        <h3>② フィルターでさらに絞り込み</h3>
+        <select id="member-filter-select">
+          <option value="">フィルターを使わない</option>
+        </select>
+      </div>
+
+      <button id="run-member-search-button" class="run-search-button">絞り込む</button>
+
+      <div class="member-result-area">
+        <div class="member-result-header">
+          <h3>該当メンバー（<span id="member-result-count">0</span>人）</h3>
+          <button id="copy-members-button" class="copy-members-button">📋 コピー</button>
+        </div>
+        <div id="member-result-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="script.js" defer></script>
+</body>
+
+</html>

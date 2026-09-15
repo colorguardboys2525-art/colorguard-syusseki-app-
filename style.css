@@ -1,0 +1,741 @@
+* {
+    box-sizing: border-box;
+}
+body {
+    margin: 0;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    background-color: #F0FDF4;
+    color: #1F2937;
+}
+/* =================================
+   ヘッダー
+================================= */
+.header {
+    background-color: #15803D;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-inner {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 30px;
+}
+.menu-button {
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 40px;
+    cursor: pointer;
+}
+
+
+/* メイン */
+main {
+    padding: 16px 16px;
+}
+.page-title h2 {
+    margin: 0;
+    font-size: 24px;
+}
+.page-title p {
+    margin: 6px 0 0;
+    color: #6B7280;
+    font-size: 14px;
+}
+
+
+/* =================================
+   操作エリア
+================================= */
+.control-area {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    margin-bottom: 16px;
+}
+
+.search {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 16px;
+}
+
+.search:focus {
+    outline: 2px solid #86EFAC;
+    border-color: #16A34A;
+}
+
+.import-button {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #15803D;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* =================================
+   表を横スクロール可能にする
+================================= */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    background-color: white;
+    border-radius: 10px;
+    border: 1px solid #D1D5DB;
+}
+
+/* =================================
+   表
+================================= */
+.attendance-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1200px;
+    width: max-content;
+}
+
+/* =================================
+   日付・Dayタイトル
+================================= */
+
+#day1-title,
+#day2-title,
+#day3-title {
+    background-color: #409a61ea;
+    color: white;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+/* =================================
+   ヘッダー
+================================= */
+.attendance-table th {
+    height: 48px;
+    padding: 8px 12px;
+    background-color: #15803D;
+    color: white;
+    border-right: 1px solid #166534;
+    border-bottom: 1px solid #166534;
+    font-size: 13px;
+    white-space: nowrap;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* =================================
+   セル
+================================= */
+.attendance-table td {
+    height: 48px;
+    padding: 8px 12px;
+    border-right: 1px solid #E5E7EB;
+    border-bottom: 1px solid #E5E7EB;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+    background-color: white;
+
+}
+
+/* =================================
+   名前列
+================================= */
+.attendance-table th.sticky-name,
+.attendance-table td.sticky-name {
+    width: 120px;
+    max-width: 130px;
+    min-width: 100px;
+}
+
+/* =================================
+   弁当サイズ
+================================= */
+.attendance-table th.sticky-lunch,
+.attendance-table td.sticky-lunch {
+    width: 100px;
+    max-width: 130x;
+    min-width: 40px;
+}
+
+/* =================================
+   その他の列
+================================= */
+.attendance-table th:nth-child(n+3):nth-child(-n+17),
+.attendance-table td:nth-child(n+3):nth-child(-n+17) {
+    min-width: 20px;
+}
+
+/* =================================
+   理由
+================================= */
+.attendance-table th:last-child,
+.attendance-table td:last-child {
+    min-width: 120px;
+}
+
+/* =================================
+   参加
+================================= */
+.present {
+    background-color: #dcfce7 !important;
+    color: #15803D;
+    font-size: 20px !important;
+    font-weight: bold;
+}
+
+/* =================================
+   行にマウスを乗せたとき
+================================= */
+.attendance-table tbody tr:hover td {
+    background-color: #F0FDF4;
+}
+
+/* =================================
+   左側固定
+================================= */
+/*
+   横スクロールしても
+   「名前」と「弁当サイズ」を
+   左側に残す
+*/
+.sticky-name {
+    position: sticky !important;
+    left: 0;
+    z-index: 15;
+    background-color: white !important;
+}
+
+.sticky-lunch {
+    position: sticky !important;
+    left: 110px;
+    z-index: 15;
+    background-color: white !important;
+}
+
+/* ヘッダーの固定列 */
+thead .sticky-name,
+thead .sticky-lunch {
+    background-color: #15803d !important;
+    z-index: 20;
+}
+
+/* =================================
+   スマホ用
+================================= */
+@media (max-width: 600px) {
+    main {
+        padding: 16px 10px;
+    }
+
+    .page-title h2 {
+        font-size: 20px;
+    }
+    .control-area {
+        flex-direction: column;
+    }
+    .search {
+        width: 100%;
+    }
+    .import-button {
+        height: 44px;
+    }
+    .table-wrapper {
+        border-radius: 8px;
+    }
+}
+
+/* =================================
+   合宿日数選択
+================================= */
+
+.day-select-modal {
+    display: none;
+
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background-color: rgba(0, 0, 0, 0.4);
+
+    justify-content: center;
+    align-items: center;
+
+    z-index: 100;
+}
+
+
+/* 選択画面 */
+
+.day-select-box {
+    width: 90%;
+    max-width: 400px;
+
+    padding: 30px;
+
+    background-color: white;
+
+    border-radius: 12px;
+
+    text-align: center;
+
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+
+/* タイトル */
+
+.day-select-box h2 {
+    margin: 0 0 10px;
+}
+
+
+/* 説明 */
+
+.day-select-box p {
+    margin-bottom: 25px;
+
+    color: #666;
+}
+
+
+/* ボタン */
+
+.day-select-buttons {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+}
+
+
+.day-select-buttons button {
+
+    height: 50px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background-color: #15803D;
+
+    color: white;
+
+    font-size: 16px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+
+.day-select-buttons button:hover {
+    background-color: #166534;
+}
+
+
+/* =========================
+   編集モードボタン
+========================= */
+
+.edit-mode-button {
+    height: 44px;
+    padding: 0 18px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background-color: #F3F4F6;
+    color: #374151;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* 編集モードON */
+.edit-mode-button.editing {
+    background-color: #DCFCE7;
+    border-color: #15803D;
+    color: #166534;
+}
+
+/* マウスを乗せたとき */
+.edit-mode-button:hover {
+    opacity: 0.85;
+}
+
+
+/* =========================
+   編集できるセル
+========================= */
+
+.attendance-table td.editable {
+    cursor: pointer;
+}
+
+.attendance-table td.editable:hover {
+    background-color: #DCFCE7 !important;
+}
+
+
+/* =========================
+   検索
+========================= */
+
+.search {
+    height: 44px;
+    padding: 0 14px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* ==============================
+   タブ
+============================== */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #15803D;
+    /*
+    position: sticky;
+    z-index: 20;
+    top: 80px;*/
+}
+
+.tab-button {
+    flex: 1;
+    max-width: 220px;
+    height: 48px;
+
+    border: none;
+    background-color: #E5E7EB;
+    color: #374151;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.tab-button.active {
+    background-color: #15803D;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+
+/* ==============================
+   フィルター管理
+============================== */
+
+.filter-create-area {
+    max-width: 700px;
+    padding: 20px;
+    background-color: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.filter-create-area h3,
+.filter-list-area h3 {
+    margin-top: 0;
+    color: #166534;
+}
+
+#filter-name {
+    width: 100%;
+    height: 44px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+
+    margin-bottom: 12px;
+}
+
+#filter-members {
+    width: 100%;
+    min-height: 250px;
+    padding: 12px;
+    box-sizing: border-box;
+
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+
+    resize: vertical;
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.filter-help {
+    color: #6B7280;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+#save-filter-button {
+    width: 100%;
+    height: 46px;
+
+    border: none;
+    border-radius: 6px;
+
+    background-color: #15803D;
+    color: white;
+
+    font-size: 15px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+#save-filter-button:hover {
+    background-color: #166534;
+}
+
+
+/* ==============================
+   作成済みフィルター
+============================== */
+.filter-item-name {
+    font-weight: bold;
+}
+
+.filter-item-count {
+    margin-left: 10px;
+    color: #6B7280;
+    font-size: 13px;
+}
+
+.delete-filter-button {
+    border: none;
+    border-radius: 6px;
+
+    padding: 8px 12px;
+
+    background-color: #FEE2E2;
+    color: #B91C1C;
+
+    cursor: pointer;
+}
+
+/* ==============================
+   フィルターの開閉
+============================== */
+
+.filter-item {
+    background-color: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.filter-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    cursor: pointer;
+}
+
+.filter-item-header:hover {
+    background-color: #F0FDF4;
+}
+
+.filter-item-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.filter-item-count {
+    margin-left: 8px;
+    color: #666;
+    font-size: 14px;
+}
+
+.filter-arrow {
+    font-size: 14px;
+    transition: transform 0.2s;
+}
+
+/* 開いたとき */
+.filter-item.open .filter-arrow {
+    transform: rotate(180deg);
+}
+
+.filter-members-list {
+    display: none;
+    padding: 0 16px 12px;
+    border-top: 1px solid #E5E7EB;
+}
+
+/* 開いたとき */
+.filter-item.open .filter-members-list {
+    display: block;
+}
+
+.filter-member {
+    padding: 8px 0;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 14px;
+}
+
+.filter-member:last-child {
+    border-bottom: none;
+}
+出席確認
+.delete-filter-button {
+    margin: 8px 16px 16px;
+}
+
+/* ==============================
+   ③メンバー一覧
+============================== */
+
+.condition-area,
+.filter-narrow-area,
+.member-result-area {
+    max-width: 700px;
+    padding: 20px;
+    background-color: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.condition-area h3,
+.filter-narrow-area h3 {
+    margin-top: 0;
+    color: #166534;
+}
+
+.condition-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.condition-row select {
+    height: 40px;
+    padding: 0 8px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background-color: white;
+}
+
+.remove-condition-button {
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    cursor: pointer;
+}
+
+.add-condition-button {
+    border: 1px dashed #15803D;
+    border-radius: 6px;
+    background-color: white;
+    color: #15803D;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.filter-narrow-area select,
+.filter-select {
+    height: 44px;
+    padding: 0 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background-color: white;
+    font-size: 14px;
+}
+
+.run-search-button {
+    width: 100%;
+    max-width: 700px;
+    height: 46px;
+    border: none;
+    border-radius: 6px;
+    background-color: #15803D;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.run-search-button:hover {
+    background-color: #166534;
+}
+
+.member-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.copy-members-button {
+    border: none;
+    border-radius: 6px;
+    background-color: #15803D;
+    color: white;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.member-result-item {
+    padding: 10px;
+    border-bottom: 1px solid #E5E7EB;
+    background-color: white;
+}
+
+.member-result-item:last-child {
+    border-bottom: none;
+}
