@@ -122,7 +122,7 @@ async function displayAttendance(rows, days) {   // ★async化
     tbody.innerHTML = "";
 
     changeHistory = [];
-    updateUndoButoon();
+    updateUndoButton();
 
     let startCol;
 
@@ -478,7 +478,7 @@ document
             document.querySelectorAll(".cell-changed").forEach(function (cell) {
                 cell.classList.remove("cell-changed");
             });
-            updateUndoButoon();
+            updateUndoButton();
         } else {
             this.textContent = "🔒 編集モード：OFF";
             this.classList.remove("editing");
