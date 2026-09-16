@@ -41,6 +41,8 @@ const COL = {
 // ==============================
 let editMode = false;
 
+let changeHistory = [];
+
 // ========================================
 // 読み込んだExcelデータを一時保存
 // ========================================
@@ -119,6 +121,9 @@ async function displayAttendance(rows, days) {   // ★async化
     const tbody = document.getElementById("attendance-body");
     tbody.innerHTML = "";
 
+    changeHistory = [];
+    updateUndoButoon();
+
     let startCol;
 
     if (days === 1) {
@@ -167,6 +172,8 @@ async function displayAttendance(rows, days) {   // ★async化
 
                 if (!editMode) return;
 
+                const previousText = cell.textContent;
+
                 if (cell.textContent === "〇") {
                     cell.textContent = "-";
                     cell.classList.remove("present");
@@ -174,6 +181,8 @@ async function displayAttendance(rows, days) {   // ★async化
                     cell.textContent = "〇";
                     cell.classList.add("present");
                 }
+
+                recordChange(cell, previousText, cell.textContent);
 
                 calculateTotals();
                 saveAttendanceState();
@@ -464,6 +473,12 @@ document
         if (editMode) {
             this.textContent = "🔓 編集モード：ON";
             this.classList.add("editing");
+
+            changeHistory = [];
+            document.querySelectorAll(".cell-changed").forEach(function (cell) {
+                cell.classList.remove("cell-changed");
+            });
+            updateUndoButoon();
         } else {
             this.textContent = "🔒 編集モード：OFF";
             this.classList.remove("editing");
@@ -1003,3 +1018,68 @@ onSnapshot(currentSheetRef, async function (snap) {
     await displayAttendance(selectedRows, selectedDays);
     refreshConditionDayOptions();
 });
+
+// ==============================
+// 変更履歴の記録・ハイライト
+// ==============================
+function recordChange(cell, previousText, newText) {
+
+    changeHistory.push({
+        cell: cell,
+        previousText: previousText,
+        newText: newText
+    });
+
+    cell.classList.add("cell-changed");
+
+    updateUndoButton();
+}
+
+
+// ==============================
+// 「元に戻す」ボタンの見た目を更新
+// ==============================
+function updateUndoButton() {
+
+    const button = document.getElementById("undo-button");
+    if (!button) return;
+
+    button.textContent = `↩ 元に戻す（${changeHistory.length}件）`;
+    button.disabled = changeHistory.length === 0;
+}
+
+
+// ==============================
+// 「元に戻す」ボタンのクリック処理
+// ==============================
+document
+    .getElementById("undo-button")
+    .addEventListener("click", function () {
+
+        if (changeHistory.length === 0) return;
+
+        // 履歴の一番最後（直近の変更）を取り出す
+        const lastChange = changeHistory.pop();
+
+        // セルの内容を変更前に戻す
+        lastChange.cell.textContent = lastChange.previousText;
+
+        if (lastChange.previousText === "〇") {
+            lastChange.cell.classList.add("present");
+        } else {
+            lastChange.cell.classList.remove("present");
+        }
+
+        // ★同じセルが履歴に他にまだ残っていなければ、ハイライトを消す
+        const stillInHistory = changeHistory.some(function (change) {
+            return change.cell === lastChange.cell;
+        });
+
+        if (!stillInHistory) {
+            lastChange.cell.classList.remove("cell-changed");
+        }
+
+        calculateTotals();
+        saveAttendanceState();
+        updateUndoButton();
+    });
