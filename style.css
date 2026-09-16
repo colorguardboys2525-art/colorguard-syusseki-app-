@@ -405,6 +405,42 @@ thead .sticky-name
     opacity: 0.85;
 }
 
+/* =========================
+   元に戻すボタン
+========================= */
+
+.undo-button {
+    height: 44px;
+    padding: 0 18px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background-color: #F3F4F6;
+    color: #374151;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.undo-button:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+/* 履歴が0件のときはグレーアウトして押せなくする */
+.undo-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* =========================
+   このセッション中に変更したセル
+========================= */
+
+.cell-changed {
+    outline: 3px solid #F59E0B !important;
+    outline-offset: -3px;
+}
+
 
 /* =========================
    編集できるセル
