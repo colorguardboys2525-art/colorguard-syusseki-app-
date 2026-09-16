@@ -102,9 +102,8 @@ document
 
             document.getElementById("day-select-modal").style.display = "none";
 
-            await displayAttendance(selectedRows, days);   // ★await追加
+            await saveSheetToFirestore(selectedRows, selectedFileName, days);
 
-            refreshConditionDayOptions();
         });
     });
 
@@ -281,7 +280,10 @@ function calculateTotals() {
     const oldTotal = document.getElementById("total-row");
     if (oldTotal) oldTotal.remove();
 
-    const rows = tbody.querySelectorAll("tr:not(#total-row)");
+    // ★フィルターや検索で非表示になっている行は集計から除外する
+    const rows = Array.from(tbody.querySelectorAll("tr:not(#total-row)"))
+        .filter(function (row) { return row.style.display !== "none"; });
+
     if (rows.length === 0) return;
 
     const firstRow = rows[0];
@@ -407,6 +409,8 @@ function updateAttendanceRowVisibility() {
 
         row.style.display = (matchesSearch && matchesFilter) ? "" : "none";
     });
+
+    calculateTotals();
 }
 
 document.getElementById("search-input").addEventListener("input", updateAttendanceRowVisibility);
@@ -957,3 +961,45 @@ async function saveAttendanceState() {
         marks: state
     });
 }
+
+// ==============================
+// 共有シート（読み込んだExcel全体）の管理
+// ==============================
+const currentSheetRef = doc(db, "appState", "current");
+
+async function saveSheetToFirestore(rows, fileName, days) {
+
+    const docId = fileName.replace(/\.[^/.]+$/, "");
+
+    // Firestoreは配列を直接ネストできないため、JSON文字列にして保存
+    await setDoc(doc(db, "sheets", docId), {
+        fileName: fileName,
+        rowsJson: JSON.stringify(rows),
+        days: days
+    });
+
+    // 「今アクティブなファイル」のポインターを更新 → 全員に配信される
+    await setDoc(currentSheetRef, {
+        docId: docId
+    });
+}
+
+// 共有シートの変更をリアルタイムで受け取る
+onSnapshot(currentSheetRef, async function (snap) {
+
+    if (!snap.exists()) return;
+
+    const docId = snap.data().docId;
+
+    const sheetSnap = await getDoc(doc(db, "sheets", docId));
+    if (!sheetSnap.exists()) return;
+
+    const data = sheetSnap.data();
+
+    selectedRows = JSON.parse(data.rowsJson);
+    selectedFileName = data.fileName;
+    selectedDays = data.days;
+
+    await displayAttendance(selectedRows, selectedDays);
+    refreshConditionDayOptions();
+});
