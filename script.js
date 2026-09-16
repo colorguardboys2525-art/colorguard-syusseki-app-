@@ -937,9 +937,9 @@ async function saveAttendanceState() {
     const tbody = document.getElementById("attendance-body");
     const rows = tbody.querySelectorAll("tr:not(#total-row)");
 
-    const state = [];
+    const state = {};
 
-    rows.forEach(function (row) {
+    rows.forEach(function (row, rowIndex) {
 
         const cells = row.querySelectorAll("td");
         const marks = [];
@@ -948,7 +948,7 @@ async function saveAttendanceState() {
             marks.push(cells[i].textContent === "〇");
         }
 
-        state.push(marks);
+        state[rowIndex] = marks;
     });
 
     const docId = getAttendanceDocId();
