@@ -289,8 +289,12 @@ function calculateTotals() {
     const oldTotal = document.getElementById("total-row");
     if (oldTotal) oldTotal.remove();
 
-    // ★フィルターや検索で非表示になっている行は集計から除外する
-    const rows = Array.from(tbody.querySelectorAll("tr:not(#total-row)"))
+    // ★弁当サイズ内訳の古い行も、いったんまとめて削除
+    document.querySelectorAll(".lunch-size-row").forEach(function (row) {
+        row.remove();
+    });
+
+    const rows = Array.from(tbody.querySelectorAll("tr:not(#total-row):not(.lunch-size-row)"))
         .filter(function (row) { return row.style.display !== "none"; });
 
     if (rows.length === 0) return;
@@ -335,6 +339,90 @@ function calculateTotals() {
     totalRow.appendChild(totalReason);
 
     tbody.appendChild(totalRow);
+
+    calculateLunchSizeTotals();
+}
+
+
+// ========================================
+// 「計」行の下に、弁当サイズ別の人数を1行でまとめて表示
+// ========================================
+function calculateLunchSizeTotals() {
+
+    const tbody = document.getElementById("attendance-body");
+
+    // 今表示されている（フィルター等で隠れていない）人の行だけ対象にする
+    const rows = Array.from(tbody.querySelectorAll("tr:not(#total-row):not(.lunch-size-row)"))
+        .filter(function (row) { return row.style.display !== "none"; });
+
+    if (rows.length === 0) return;
+
+    // サイズごとに人数を数える
+    const sizeCounts = {};
+
+    rows.forEach(function (row) {
+
+        const lunchCell = row.querySelector(".sticky-lunch");
+        if (!lunchCell) return;
+
+        const size = lunchCell.textContent.trim();
+
+        // 空欄や「-」は集計に含めない
+        if (!size || size === "-") return;
+
+        sizeCounts[size] = (sizeCounts[size] || 0) + 1;
+    });
+
+    if (Object.keys(sizeCounts).length === 0) return;
+
+    // ★表示したい順番をここで指定
+    const sizeOrder = ["特大", "大", "中", "小"];
+
+    // 指定した順番でサイズを並び替える（Excel側の表記ゆれで
+    // sizeOrderに無いサイズがあれば、最後にまとめて追加）
+    const sortedSizes = Object.keys(sizeCounts).sort(function (a, b) {
+
+        let indexA = sizeOrder.indexOf(a);
+        let indexB = sizeOrder.indexOf(b);
+
+        // sizeOrderに無いサイズは一番後ろに回す
+        if (indexA === -1) indexA = sizeOrder.length;
+        if (indexB === -1) indexB = sizeOrder.length;
+
+        return indexA - indexB;
+    });
+
+    // 「大：10人、中：8人、小：3人」のような文字列を作る
+    const summaryText = sortedSizes
+        .map(function (size) {
+            return `${size}：${sizeCounts[size]}人`;
+        })
+        .join("　　");
+
+    // 列数を「計」行に合わせる
+    const totalRow = document.getElementById("total-row");
+    if (!totalRow) return;
+
+    const columnCount = totalRow.querySelectorAll("td").length;
+
+    // ====================================
+    // 1行だけ作る
+    // ====================================
+    const tr = document.createElement("tr");
+    tr.className = "lunch-size-row";
+
+    const labelCell = document.createElement("td");
+    labelCell.className = "sticky-name";
+    labelCell.textContent = "弁当内訳";
+    tr.appendChild(labelCell);
+
+    const summaryCell = document.createElement("td");
+    summaryCell.colSpan = columnCount - 1;   // 名前列を除いた残り全部を1セルにまとめる
+    summaryCell.textContent = summaryText;
+    summaryCell.style.textAlign = "left";
+    tr.appendChild(summaryCell);
+
+    tbody.appendChild(tr);
 }
 
 
@@ -467,6 +555,14 @@ function populateFilterSelects() {
 document
     .getElementById("edit-mode-button")
     .addEventListener("click", function () {
+
+        if(!editMode){
+            const password = prompt("パスワードを入力してください");
+            if(password !== "2525"){
+                alert("パスワードが違います");
+                return;
+            };
+        }
 
         editMode = !editMode;
 
