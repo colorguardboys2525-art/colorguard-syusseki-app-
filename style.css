@@ -136,7 +136,7 @@ main {
    ヘッダー
 ================================= */
 .attendance-table th {
-    height: 48px;
+    height: 35px;
     padding: 8px 12px;
     background-color: #15803D;
     color: white;
@@ -155,7 +155,7 @@ main {
    セル
 ================================= */
 .attendance-table td {
-    height: 48px;
+    height: 38px;
     padding: 8px 12px;
     border-right: 1px solid #E5E7EB;
     border-bottom: 1px solid #E5E7EB;
@@ -166,7 +166,7 @@ main {
 
 }
 .attendance-table thead tr:nth-child(2) th {
-    top: 48px;
+    top: 38.5px;/*?????*/
 }
 
 /* =================================
@@ -256,6 +256,29 @@ thead .sticky-name
 {    /*thead .sticky-lunch*/
     background-color: #15803d !important;
     z-index: 20;
+}
+
+/* =================================
+   「計」行を下に固定
+================================= */
+#total-row td {
+    position: sticky;
+    bottom: 37px;   /* 弁当内訳行（1行分＝48px）の上に重なるようにする */
+    z-index: 20;
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.08);
+    
+    height: 25px;
+    font-size: 15px;
+}
+
+/* =================================
+   「弁当内訳」行を下に固定
+================================= */
+.lunch-size-row td {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    height: 25px;
 }
 
 /* =================================
@@ -787,4 +810,13 @@ thead .sticky-name
 
 .member-result-item:last-child {
     border-bottom: none;
+}
+
+/* =================================
+   弁当サイズ別内訳の行
+================================= */
+.lunch-size-row td {
+    background-color: #f9fcfb !important;
+    font-weight: bold;
+    color: #555756;
 }
