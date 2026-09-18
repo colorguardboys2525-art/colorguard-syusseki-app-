@@ -53,6 +53,7 @@
       <button class="tab-button active" data-tab="attendance-tab">①出席確認</button>
       <button class="tab-button" data-tab="filter-tab">②フィルター管理</button>
       <button class="tab-button" data-tab="member-list-tab">③メンバ一覧（コピー機能）</button>
+      <button class="tab-button" data-tab="bulk-tab">④キャンセル対応</button>
     </div>
 
     <div id="attendance-tab" class="tab-content active">
@@ -178,6 +179,35 @@
         </div>
         <div id="member-result-list"></div>
       </div>
+    </div>
+
+    <div id="bulk-tab" class="tab-content">
+      <div class="page-title">
+    <div>
+      <h2>キャンセル・追加対応</h2>
+      <p>連絡メモから、複数人の出欠をまとめて変更できます</p>
+    </div>
+  </div>
+
+  <div class="bulk-memo-area">
+    <h3>📝 メモ</h3>
+    <textarea id="bulk-memo" placeholder="キャンセル連絡の内容を貼り付けてください"></textarea>
+    <button id="bulk-parse-button" type="button" class="bulk-parse-button">
+      メモから自動入力
+    </button>
+  </div>
+
+  <datalist id="roster-names"></datalist>
+
+  <div id="bulk-rows-container"></div>
+
+  <button id="bulk-add-row-button" type="button" class="add-condition-button">
+    ＋ 行を追加
+  </button>
+
+      <button id="bulk-apply-button" type="button" class="run-search-button">
+        決定（まとめて反映）
+      </button>
     </div>
   </main>
 
