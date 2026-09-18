@@ -393,8 +393,8 @@ function calculateLunchSizeTotals() {
     // sizeOrderに無いサイズがあれば、最後にまとめて追加）
     const sortedSizes = Object.keys(sizeCounts).sort(function (a, b) {
 
-        let indexA = SIZE_ORDER.length;
-        let indexB = SIZE_ORDER.length;
+        let indexA = SIZE_ORDER.indexOf(a);
+        let indexB = SIZE_ORDER.indexOf(b);
 
         // sizeOrderに無いサイズは一番後ろに回す
         if (indexA === -1) indexA = SIZE_ORDER.length;
