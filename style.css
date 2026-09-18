@@ -820,3 +820,114 @@ thead .sticky-name
     font-weight: bold;
     color: #555756;
 }
+
+/* ==============================
+   キャンセル対応パネル
+============================== */
+
+.bulk-memo-area {
+    max-width: 700px;
+    padding: 20px;
+    background-color: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.bulk-memo-area h3 {
+    margin-top: 0;
+    color: #166534;
+}
+
+#bulk-memo {
+    width: 100%;
+    min-height: 160px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.7;
+    resize: vertical;
+    margin-bottom: 12px;
+}
+
+.bulk-parse-button {
+    height: 44px;
+    padding: 0 18px;
+    border: none;
+    border-radius: 6px;
+    background-color: #15803D;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.bulk-parse-button:hover {
+    background-color: #166534;
+}
+
+.bulk-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background-color: white;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+}
+
+.bulk-name-input {
+    height: 40px;
+    padding: 0 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 160px;
+}
+
+.bulk-toggle-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.bulk-toggle-button {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background-color: #F3F4F6;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.bulk-toggle-button.on {
+    background-color: #DCFCE7;
+    border-color: #15803D;
+    color: #166534;
+    font-weight: bold;
+}
+
+.bulk-toggle-button.changed {
+    border: 2px solid #EA580C;
+    box-shadow: 0 0 0 2px #FFEDD5;
+}
+
+.bulk-delete-row-button {
+    height: 36px;
+    width: 36px;
+    border: none;
+    border-radius: 6px;
+    background-color: #FEE2E2;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#bulk-add-row-button {
+    margin-bottom: 20px;
+}
