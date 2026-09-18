@@ -281,6 +281,11 @@ thead .sticky-name
     height: 25px;
 }
 
+#total-row .sticky-name,
+.lunch-size-row .sticky-name {
+    z-index: 55;
+}
+
 /* =================================
    スマホ用
 ================================= */
@@ -515,7 +520,7 @@ thead .sticky-name
     background-color: #E5E7EB;
     color: #374151;
 
-    font-size: 15px;
+    font-size: 13px;
     font-weight: bold;
 
     cursor: pointer;
