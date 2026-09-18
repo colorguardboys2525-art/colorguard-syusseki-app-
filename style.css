@@ -931,3 +931,23 @@ thead .sticky-name
 #bulk-add-row-button {
     margin-bottom: 20px;
 }
+/* ==============================
+   メンバー一覧：弁当サイズ内訳
+============================== */
+#member-lunch-summary {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #f9fcfb !important;
+    font-weight: bold;
+    color: #555756;
+}
+/* ==============================
+   メンバー一覧：弁当サイズ内訳（一覧の一番下に表示）
+============================== */
+.member-lunch-summary-item {
+    font-weight: bold;
+    color: #555756;
+    background-color: #f9fcfb !important;
+}
