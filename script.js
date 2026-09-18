@@ -201,6 +201,8 @@ async function displayAttendance(rows, days) {   // ★async化
 
     calculateTotals();
 
+    populateRosterNamesDatalist();
+
     // ★変更：無条件保存ではなく、Firestoreとの同期を開始する
     await initAttendanceSync();
 }
@@ -1179,3 +1181,520 @@ document
         saveAttendanceState();
         updateUndoButton();
     });
+
+    // ==============================
+// キャンセル対応：文字の正規化
+// ==============================
+function normalizeLine(line) {
+    // コピペ時に紛れ込む見えない文字を除去
+    return line.replace(/[\u200B-\u200F\u202A-\u202E\u2060\uFEFF]/g, "").trim();
+}
+
+const POSITIVE_WORDS = ["参加", "出席", "追加", "〇", "○"];
+const NEGATIVE_WORDS = ["欠席", "キャンセル", "ｷｬﾝｾﾙ", "×"];
+
+const ITEM_ALIASES = {
+    "出欠": "出欠",
+    "朝食": "朝食",
+    "昼食": "昼食",
+    "おやつ": "おやつ",
+    "夕食": "夕食",
+    "宿泊": "宿泊",
+    "泊": "宿泊"
+};
+
+
+// ==============================
+// 「9月12日」のような文字列から、その日が
+// 何日目（1/2/3）に当たるかを調べる
+// ==============================
+function dayNumberToSlot(dayNum) {
+    for (let slot = 1; slot <= 3; slot++) {
+        if (dayLabels[slot] && dayLabels[slot].includes(dayNum + "日")) {
+            return slot;
+        }
+    }
+    return null;
+}
+
+
+// ==============================
+// 「夕食、宿泊追加」「おやつ〇、夕食〇、泊〇」のような
+// 項目リスト行を解析する
+// ==============================
+function splitLineIntoItemSegments(line) {
+
+    const rawSegments = line.split(/[、,]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (rawSegments.length === 0) return null;
+
+    function extractStatus(segment) {
+        const allWords = POSITIVE_WORDS.concat(NEGATIVE_WORDS);
+
+        for (let i = 0; i < allWords.length; i++) {
+            const w = allWords[i];
+            if (segment.endsWith(w)) {
+                return {
+                    rest: segment.slice(0, segment.length - w.length).replace(/→$/, "").trim(),
+                    present: POSITIVE_WORDS.indexOf(w) !== -1
+                };
+            }
+        }
+
+        return null;
+    }
+
+    const parsedEach = rawSegments.map(extractStatus);
+
+    // 全セグメントに個別の状態がある場合（おやつ〇、夕食〇、泊〇）
+    if (parsedEach.every(function (p) { return p !== null; })) {
+        return parsedEach.map(function (p) {
+            return { itemLabel: p.rest, present: p.present };
+        });
+    }
+
+    // 最後のセグメントだけに状態がある場合（夕食、宿泊追加）
+    const lastParsed = parsedEach[parsedEach.length - 1];
+
+    if (lastParsed !== null && parsedEach.slice(0, -1).every(function (p) { return p === null; })) {
+        return rawSegments.map(function (seg, i) {
+            const itemLabel = (i === rawSegments.length - 1) ? lastParsed.rest : seg;
+            return { itemLabel: itemLabel, present: lastParsed.present };
+        });
+    }
+
+    return null;
+}
+
+
+// ==============================
+// 1人分のメモ（複数行）を解析する
+// ==============================
+function parsePersonBlock(lines, rosterNames) {
+
+    let name = null;
+    let currentDaySlot = null;
+    const changes = [];
+    const reasonLines = [];
+
+    lines.forEach(function (rawLine) {
+
+        const line = normalizeLine(rawLine);
+        if (!line) return;
+
+        // 名前を検出（見つかるまでの行は無視）
+        if (!name && rosterNames.indexOf(line) !== -1) {
+            name = line;
+            return;
+        }
+
+        if (!name) return;
+
+        // 「12日13日欠席」のような複数日＋状態
+        let m = line.match(/^((?:\d{1,2}日)+)(参加|出席|欠席|キャンセル|追加)$/);
+        if (m) {
+            const dayNumbers = m[1].match(/\d{1,2}/g).map(Number);
+            const present = POSITIVE_WORDS.indexOf(m[2]) !== -1;
+
+            dayNumbers.forEach(function (dNum) {
+                const slot = dayNumberToSlot(dNum);
+                if (slot) {
+                    changes.push({ daySlot: slot, item: "出欠", present: present });
+                    currentDaySlot = slot;
+                }
+            });
+            return;
+        }
+
+        // 「13日朝食追加」のような日付＋項目＋状態
+        m = line.match(/^(\d{1,2})日(出欠|朝食|昼食|おやつ|夕食|宿泊|泊)(参加|出席|欠席|キャンセル|追加)$/);
+        if (m) {
+            const slot = dayNumberToSlot(Number(m[1]));
+            const item = ITEM_ALIASES[m[2]];
+            const present = POSITIVE_WORDS.indexOf(m[3]) !== -1;
+
+            if (slot) {
+                changes.push({ daySlot: slot, item: item, present: present });
+                currentDaySlot = slot;
+            }
+            return;
+        }
+
+        // 項目リスト行（日付指定なし＝直前の日付を引き継ぐ）
+        const segments = splitLineIntoItemSegments(line);
+
+        if (segments && currentDaySlot) {
+
+            segments.forEach(function (seg) {
+
+                const item = ITEM_ALIASES[seg.itemLabel];
+
+                // 表に無い項目（例：勉強会）は黙って無視する
+                if (!item) return;
+
+                changes.push({ daySlot: currentDaySlot, item: item, present: seg.present });
+            });
+
+            return;
+        }
+
+        // どれにも当てはまらなければ「理由」として扱う
+        reasonLines.push(line);
+    });
+
+    return { name: name, changes: changes, reason: reasonLines.join(" ") };
+}
+
+
+// ==============================
+// メモ全体（複数人分）を解析する
+// ==============================
+function parseMemoText(text) {
+
+    const rosterNames = getAllRosterNames();
+
+    const blocks = text.split(/\n\s*\n/);
+
+    return blocks
+        .map(function (block) {
+            return parsePersonBlock(block.split(/\r?\n/), rosterNames);
+        })
+        .filter(function (result) { return result.name; });
+}
+
+
+// ==============================
+// 今の出席表に載っている全員の名前を取得
+// ==============================
+function getAllRosterNames() {
+
+    const names = [];
+
+    document.querySelectorAll("#attendance-body .sticky-name").forEach(function (cell) {
+        const text = cell.textContent.trim();
+        if (text && text !== "計" && text !== "弁当内訳") {
+            names.push(text);
+        }
+    });
+
+    return names;
+}
+
+
+// ==============================
+// 名前から、実際の出席表の行（tr）を探す
+// ==============================
+function findRowByName(name) {
+
+    let found = null;
+
+    document.querySelectorAll("#attendance-body tr:not(#total-row):not(.lunch-size-row)")
+        .forEach(function (tr) {
+            const cell = tr.querySelector(".sticky-name");
+            if (cell && cell.textContent.trim() === name) {
+                found = tr;
+            }
+        });
+
+    return found;
+}
+
+
+// ==============================
+// 「〇日目の〇〇」から、実際の<td>セルを探す
+// ==============================
+function getStartColForDays(days) {
+    if (days === 1) return 14;
+    if (days === 2) return 8;
+    return 3;
+}
+
+function getCellForDayItem(row, daySlot, itemLabel) {
+
+    const dayCols = DAY_COLUMNS[daySlot];
+    if (!dayCols) return null;
+
+    const itemDef = dayCols.find(function (i) { return i.label === itemLabel; });
+    if (!itemDef) return null;
+
+    const startCol = getStartColForDays(selectedDays);
+    const cells = row.querySelectorAll("td");
+    const index = 2 + (itemDef.col - startCol);
+
+    return cells[index] || null;
+}
+
+
+// ==============================
+// 名前の候補（datalist）を更新
+// ==============================
+function populateRosterNamesDatalist() {
+
+    const datalist = document.getElementById("roster-names");
+    if (!datalist) return;
+
+    datalist.innerHTML = "";
+
+    getAllRosterNames().forEach(function (name) {
+        const option = document.createElement("option");
+        option.value = name;
+        datalist.appendChild(option);
+    });
+}
+
+
+// ==============================
+// パネルの行データ管理
+// ==============================
+let bulkRows = [];
+let bulkRowIdCounter = 0;
+
+function initRowToggles(rowData) {
+
+    rowData.toggles = {};
+
+    if (!rowData.name) {
+        rowData.originalToggles = {};
+        return;
+    }
+
+    const tr = findRowByName(rowData.name);
+    if (!tr) {
+        rowData.originalToggles = {};
+        return;
+    }
+
+    getActiveDayNumbers().forEach(function (daySlot) {
+        DAY_COLUMNS[daySlot].forEach(function (itemDef) {
+
+            const cell = getCellForDayItem(tr, daySlot, itemDef.label);
+
+            if (cell) {
+                rowData.toggles[daySlot + "-" + itemDef.label] = (cell.textContent === "〇");
+            }
+        });
+    });
+
+    // ★今の実際の表の値を「元の値」として別に保存しておく
+    rowData.originalToggles = Object.assign({}, rowData.toggles);
+}
+
+function renderRowToggles(rowEl, rowData) {
+
+    const toggleArea = rowEl.querySelector(".bulk-toggle-area");
+    toggleArea.innerHTML = "";
+
+    getActiveDayNumbers().forEach(function (daySlot) {
+        DAY_COLUMNS[daySlot].forEach(function (itemDef) {
+
+            const key = daySlot + "-" + itemDef.label;
+            const isPresent = rowData.toggles[key] === true;
+
+            // ★元の値と比べて、変更されようとしているかを判定
+            const originalValue = rowData.originalToggles ? rowData.originalToggles[key] : undefined;
+            const isChanged = originalValue !== undefined && originalValue !== isPresent;
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "bulk-toggle-button";
+            btn.classList.toggle("on", isPresent);
+            btn.classList.toggle("changed", isChanged);   // ★追加
+
+            const dayLabel = dayLabels[daySlot] || (daySlot + "日目");
+
+            // ★変更ありの場合は目印を付ける
+            const mark = isChanged ? " ⚠変更" : "";
+            btn.textContent = `${dayLabel} ${itemDef.label}：${isPresent ? "〇" : "-"}${mark}`;
+
+            btn.addEventListener("click", function () {
+                rowData.toggles[key] = !isPresent;
+                renderRowToggles(rowEl, rowData);
+            });
+
+            toggleArea.appendChild(btn);
+        });
+    });
+}
+
+function renderBulkRow(rowData) {
+
+    const container = document.getElementById("bulk-rows-container");
+
+    const div = document.createElement("div");
+    div.className = "bulk-row";
+    div.dataset.rowId = rowData.id;
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "bulk-name-input";
+    nameInput.setAttribute("list", "roster-names");
+    nameInput.placeholder = "名前を検索";
+    nameInput.value = rowData.name || "";
+
+    nameInput.addEventListener("change", function () {
+        rowData.name = nameInput.value.trim();
+        initRowToggles(rowData);
+        renderRowToggles(div, rowData);
+    });
+
+    div.appendChild(nameInput);
+
+    const toggleArea = document.createElement("div");
+    toggleArea.className = "bulk-toggle-area";
+    div.appendChild(toggleArea);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "bulk-delete-row-button";
+    deleteButton.textContent = "🗑";
+
+    deleteButton.addEventListener("click", function () {
+        bulkRows = bulkRows.filter(function (r) { return r.id !== rowData.id; });
+        div.remove();
+    });
+
+    div.appendChild(deleteButton);
+
+    container.appendChild(div);
+
+    renderRowToggles(div, rowData);
+}
+
+function addBulkRow() {
+
+    const rowData = { id: "row" + (bulkRowIdCounter++), name: "", toggles: {} };
+
+    bulkRows.push(rowData);
+    renderBulkRow(rowData);
+}
+
+
+// ==============================
+// 「＋ 行を追加」ボタン
+// ==============================
+document
+    .getElementById("bulk-add-row-button")
+    .addEventListener("click", addBulkRow);
+
+    addBulkRow;
+
+
+// ==============================
+// 「メモから自動入力」ボタン
+// ==============================
+document
+    .getElementById("bulk-parse-button")
+    .addEventListener("click", function () {
+
+        const text = document.getElementById("bulk-memo").value;
+        const parsed = parseMemoText(text);
+
+        if (parsed.length === 0) {
+            alert("メモから対象者を検出できませんでした。名簿に登録されている名前と完全に一致しているか確認してください。");
+            return;
+        }
+
+        parsed.forEach(function (person) {
+
+            const rowData = { id: "row" + (bulkRowIdCounter++), name: person.name, toggles: {} };
+
+            // まず現在の実際の状態を初期値にする
+            initRowToggles(rowData);
+
+            // そこにメモから読み取った変更を上書きする
+            person.changes.forEach(function (change) {
+                rowData.toggles[change.daySlot + "-" + change.item] = change.present;
+            });
+
+            bulkRows.push(rowData);
+            renderBulkRow(rowData);
+        });
+
+        alert(`${parsed.length}人分を自動入力しました。内容を確認してから「決定」を押してください。`);
+    });
+
+
+// ==============================
+// 「決定」ボタン：まとめて実際の表に反映
+// ==============================
+document
+    .getElementById("bulk-apply-button")
+    .addEventListener("click", async function () {
+
+        if (bulkRows.length === 0) {
+            alert("反映する行がありません。");
+            return;
+        }
+
+        let appliedCount = 0;
+
+        bulkRows.forEach(function (rowData) {
+
+            if (!rowData.name) return;
+
+            const tr = findRowByName(rowData.name);
+            if (!tr) return;
+
+            Object.keys(rowData.toggles).forEach(function (key) {
+
+                const parts = key.split("-");
+                const daySlot = Number(parts[0]);
+                const item = parts[1];
+
+                const cell = getCellForDayItem(tr, daySlot, item);
+                if (!cell) return;
+
+                const newText = rowData.toggles[key] ? "〇" : "-";
+                const previousText = cell.textContent;
+
+                if (previousText === newText) return;
+
+                cell.textContent = newText;
+                cell.classList.toggle("present", newText === "〇");
+
+                recordChange(cell, previousText, newText);
+                appliedCount++;
+            });
+        });
+
+        calculateTotals();
+        await saveAttendanceState();
+
+        alert(`${appliedCount}件のセルを変更しました。`);
+
+        bulkRows = [];
+        document.getElementById("bulk-rows-container").innerHTML = "";
+    });
+
+
+// ==============================
+// メモをFirestoreに保存・共有する
+// ==============================
+function debounce(fn, wait) {
+    let timer = null;
+    return function () {
+        const args = arguments;
+        const self = this;
+        clearTimeout(timer);
+        timer = setTimeout(function () { fn.apply(self, args); }, wait);
+    };
+}
+
+const bulkMemoRef = doc(db, "appState", "bulkMemo");
+
+document
+    .getElementById("bulk-memo")
+    .addEventListener("input", debounce(async function () {
+        await setDoc(bulkMemoRef, { text: document.getElementById("bulk-memo").value });
+    }, 800));
+
+onSnapshot(bulkMemoRef, function (snap) {
+
+    if (!snap.exists()) return;
+
+    const textarea = document.getElementById("bulk-memo");
+
+    // 自分が今まさに入力中でなければ、他の人の更新を反映する
+    if (document.activeElement !== textarea) {
+        textarea.value = snap.data().text || "";
+    }
+});
