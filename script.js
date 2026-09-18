@@ -1,4 +1,9 @@
 // ========================================
+// 弁当サイズの表示順（共通で使う）
+// ========================================
+const SIZE_ORDER = ["特大", "大", "中", "小"];
+
+// ========================================
 // 「〇日目の〇〇」→ Excel列番号 の対応表
 // ========================================
 const DAY_COLUMNS = {
@@ -50,6 +55,8 @@ let selectedRows = null;
 let selectedFileName = "";
 let selectedDays = 3;
 let dayLabels = {1: "1日目", 2: "2日目", 3: "3日目"};
+// ★追加：直近の検索結果に対する弁当サイズ内訳（無ければnull）
+let lastLunchSizeSummary = null;
 
 // ★追加：出欠状態のリアルタイム監視を後で止められるようにしておく変数
 let unsubscribeAttendanceListener = null;
@@ -377,19 +384,21 @@ function calculateLunchSizeTotals() {
 
     if (Object.keys(sizeCounts).length === 0) return;
 
-    // ★表示したい順番をここで指定
-    const sizeOrder = ["特大", "大", "中", "小"];
+    // ========================================
+    // 弁当サイズの表示順（共通で使う）
+    // ========================================
+    const SIZE_ORDER = ["特大", "大", "中", "小"];
 
     // 指定した順番でサイズを並び替える（Excel側の表記ゆれで
     // sizeOrderに無いサイズがあれば、最後にまとめて追加）
     const sortedSizes = Object.keys(sizeCounts).sort(function (a, b) {
 
-        let indexA = sizeOrder.indexOf(a);
-        let indexB = sizeOrder.indexOf(b);
+        let indexA = SIZE_ORDER.length;
+        let indexB = SIZE_ORDER.length;
 
         // sizeOrderに無いサイズは一番後ろに回す
-        if (indexA === -1) indexA = sizeOrder.length;
-        if (indexB === -1) indexB = sizeOrder.length;
+        if (indexA === -1) indexA = SIZE_ORDER.length;
+        if (indexB === -1) indexB = SIZE_ORDER.length;
 
         return indexA - indexB;
     });
@@ -425,6 +434,66 @@ function calculateLunchSizeTotals() {
     tr.appendChild(summaryCell);
 
     tbody.appendChild(tr);
+}
+
+// ========================================
+// 列番号から「出欠」「昼食」などの項目名を逆引き
+// ========================================
+function getItemLabelForCol(col) {
+
+    for (const day in DAY_COLUMNS) {
+        const found = DAY_COLUMNS[day].find(function (item) {
+            return item.col === col;
+        });
+        if (found) return found.label;
+    }
+
+    return null;
+}
+
+
+// ========================================
+// 指定した名前リストの、弁当サイズ内訳を計算
+// ========================================
+function calculateLunchSizeBreakdownForNames(names) {
+
+    const sizeCounts = {};
+
+    names.forEach(function (name) {
+
+        for (let i = 2; i < selectedRows.length; i++) {
+
+            const row = selectedRows[i];
+
+            if (row[COL.NAME] === name) {
+
+                const size = (row[COL.LUNCH_SIZE] || "").toString().trim();
+
+                if (size && size !== "-") {
+                    sizeCounts[size] = (sizeCounts[size] || 0) + 1;
+                }
+
+                break;
+            }
+        }
+    });
+
+    if (Object.keys(sizeCounts).length === 0) return null;
+
+    const sortedSizes = Object.keys(sizeCounts).sort(function (a, b) {
+
+        let indexA = SIZE_ORDER.indexOf(a);
+        let indexB = SIZE_ORDER.indexOf(b);
+
+        if (indexA === -1) indexA = SIZE_ORDER.length;
+        if (indexB === -1) indexB = SIZE_ORDER.length;
+
+        return indexA - indexB;
+    });
+
+    return sortedSizes.map(function (size) {
+        return `${size}：${sizeCounts[size]}人`;
+    });
 }
 
 
@@ -847,11 +916,24 @@ document
         const filterIndex = document.getElementById("member-filter-select").value;
 
         if (filterIndex !== "") {
-            const filterMembers = filters[Number(filterIndex)].members;
+
+            const filterMembers =
+                filters[Number(filterIndex)].members;
+
             matchedNames = matchedNames.filter(function (name) {
                 return filterMembers.includes(name);
             });
         }
+
+        // ★条件の中に「昼食」が含まれているか判定
+        const hasLunchCondition = conditions.some(function (cond) {
+            return getItemLabelForCol(cond.col) === "昼食";
+        });
+
+        // ★含まれていれば弁当サイズを集計、無ければnull
+        lastLunchSizeSummary = hasLunchCondition
+            ? calculateLunchSizeBreakdownForNames(matchedNames)
+            : null;
 
         displayMemberResult(matchedNames);
     });
@@ -874,11 +956,24 @@ function displayMemberResult(names) {
     }
 
     names.forEach(function (name) {
+
         const div = document.createElement("div");
+
         div.className = "member-result-item";
         div.textContent = name;
+
         list.appendChild(div);
     });
+
+    /* ★弁当サイズ内訳があれば、同じリストの一番下に続けて表示*/
+    if (lastLunchSizeSummary) {
+
+        const summaryDiv = document.createElement("div");
+        summaryDiv.className = "member-result-item member-lunch-summary-item";
+        summaryDiv.textContent = "【弁当サイズ内訳】" + lastLunchSizeSummary.join("、");
+
+        list.appendChild(summaryDiv);
+    }
 }
 
 
@@ -889,18 +984,27 @@ document
     .getElementById("copy-members-button")
     .addEventListener("click", function () {
 
-        const items = document.querySelectorAll("#member-result-list .member-result-item");
+        const items =
+            document.querySelectorAll(
+                "#member-result-list .member-result-item:not(.member-lunch-summary-item)"
+            );
 
         if (items.length === 0) {
             alert("コピーするメンバーがいません。");
             return;
         }
 
-        const names = Array.from(items).map(function (item) {
-            return item.textContent;
-        });
+        const names =
+            Array.from(items).map(function (item) {
+                return item.textContent;
+            });
 
-        const text = names.join("\n");
+        let text = names.join("\n");
+
+        // ★弁当サイズ内訳があれば、末尾に追記
+        if (lastLunchSizeSummary) {
+            text += "\n\n【弁当サイズ内訳】\n" + lastLunchSizeSummary.join("\n");
+        }
 
         navigator.clipboard.writeText(text)
             .then(function () {
